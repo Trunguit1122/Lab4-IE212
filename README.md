@@ -89,17 +89,23 @@ Lab04-BackgroundRemover/
 ├── 🐳 docker-compose.yml        # Orchestration: Spark cluster + Servers
 ├── 🐳 Dockerfile                # Image build cho Python services
 ├── 📦 requirements.txt          # Dependencies Python
+├── 📄 .gitignore                # Git ignore file
 │
 ├── 📂 models/
-│   └── selfie_segmenter.tflite # Pre-trained AI model
+│   └── selfie_segmenter.tflite # Pre-trained AI model (MediaPipe)
+│
+├── 📂 gif/
+│   └── demo.gif                 # Demo animation (57MB)
 │
 ├── 📂 input_images/             # Thư mục chứa ảnh input
-├── 📂 output_images/            # Thư mục lưu ảnh đã xử lý
-└── 📂 docs_image/               # Hình ảnh documentation
-    ├── demo.gif
-    ├── image.png
-    ├── image1.png
-    └── image2.png
+│   ├── 20260104_144143_278c9ab7/
+│   ├── 20260104_144311_9fb8899e/
+│   └── ...                      # Các session khác
+│
+└── 📂 output_images/            # Thư mục lưu ảnh đã xử lý
+    ├── 20260104_140534/
+    ├── 20260104_144143_278c9ab7/
+    └── ...                      # Kết quả theo session
 ```
 
 ---
