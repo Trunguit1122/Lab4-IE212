@@ -91,7 +91,8 @@ Lab04-BackgroundRemover/
 ├── 🐳 docker-compose.yml        # Orchestration: Spark cluster + Servers
 ├── 🐳 Dockerfile                # Image build cho Python services
 ├── 📦 requirements.txt          # Dependencies Python
-├── 📄 .gitignore                # Git ignore file
+├── 📄 .gitignore                # Git ignore file (input_images/, output_images/)
+├── 📘 README.md                 # Tài liệu hướng dẫn
 │
 ├── 📂 models/
 │   └── selfie_segmenter.tflite # Pre-trained AI model (MediaPipe)
@@ -99,16 +100,14 @@ Lab04-BackgroundRemover/
 ├── 📂 gif/
 │   └── demo.gif                 # Demo animation (57MB)
 │
-├── 📂 input_images/             # Thư mục chứa ảnh input
-│   ├── 20260104_144143_278c9ab7/
-│   ├── 20260104_144311_9fb8899e/
-│   └── ...                      # Các session khác
+├── 📂 input_images/             # Thư mục chứa ảnh input (ignored)
+│   └── (tạo thư mục này khi chạy)
 │
-└── 📂 output_images/            # Thư mục lưu ảnh đã xử lý
-    ├── 20260104_140534/
-    ├── 20260104_144143_278c9ab7/
-    └── ...                      # Kết quả theo session
+└── 📂 output_images/            # Thư mục lưu ảnh đã xử lý (ignored)
+    └── (kết quả được lưu tại đây)
 ```
+
+**Lưu ý:** Thư mục `input_images/` và `output_images/` không được push lên Git (đã có trong .gitignore)
 
 ---
 
