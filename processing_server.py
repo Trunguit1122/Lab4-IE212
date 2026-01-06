@@ -139,6 +139,93 @@ class ProcessingServer:
         print(f"[Processing Server] Tong cong da nhan {len(frames)} frame")
         return frames
     
+    def receive_and_process_streaming(self):
+        """
+        XỬ LÝ STREAMING THỰC SỰ - Đúng yêu cầu đề bài:
+        Nhận từng frame → Xử lý ngay với Spark → Lưu kết quả
+        Mỗi frame được xử lý trong ngữ cảnh Spark
+        """
+        # Nhận số lượng frame sẽ được stream
+        num_frames_data = self._recv_exact(4)
+        if not num_frames_data:
+            print("[Processing Server] Khong nhan duoc thong tin so luong frame")
+            return []
+        
+        num_frames = struct.unpack('!I', num_frames_data)[0]
+        print(f"[Processing Server - STREAMING MODE] Se xu ly {num_frames} frame theo thoi gian thuc")
+        
+        if num_frames == 0:
+            print("[Processing Server] Khong co frame nao de xu ly")
+            return []
+        
+        # Tạo output folder cho session
+        session_output = os.path.join(self.output_folder, self.session_id)
+        os.makedirs(session_output, exist_ok=True)
+        
+        results = []
+        
+        # XỬ LÝ TỪNG FRAME NGAY KHI NHẬN ĐƯỢC
+        for i in range(num_frames):
+            # Nhận tên file
+            name_len_data = self._recv_exact(4)
+            if not name_len_data:
+                break
+            name_len = struct.unpack('!I', name_len_data)[0]
+            filename = self._recv_exact(name_len).decode('utf-8')
+            
+            # Nhận frame
+            frame_id, frame, status = self.receive_frame()
+            
+            if status == "END":
+                print("[Processing Server] Nhan tin hieu ket thuc")
+                break
+            
+            if frame is None:
+                print(f"[Processing Server] Frame {frame_id} bi loi")
+                continue
+            
+            print(f"[Processing Server] Nhan frame {frame_id}: {filename}")
+            
+            # XỬ LÝ NGAY FRAME NÀY VỚI SPARK (không đợi nhận hết)
+            result = self._process_single_frame_streaming(frame, frame_id, filename, session_output)
+            results.append(result)
+            
+            print(f"[Processing Server] ✓ Da xu ly xong frame {frame_id} - {result[2]}")
+        
+        print(f"\n[Processing Server] HOAN THANH! Xu ly {len(results)}/{num_frames} frame")
+        return results
+    
+    def _process_single_frame_streaming(self, frame, frame_id, filename, output_folder):
+        """
+        Xử lý 1 frame trong streaming mode
+        QUAN TRỌNG: Mỗi frame được xử lý TRONG NGỮ CẢNH SPARK
+        """
+        try:
+            # Lưu frame tạm để Spark worker có thể đọc
+            temp_folder = f"/tmp/spark_stream_{self.session_id}"
+            os.makedirs(temp_folder, exist_ok=True)
+            temp_path = os.path.join(temp_folder, filename)
+            cv2.imwrite(temp_path, frame)
+            
+            output_path = os.path.join(output_folder, filename)
+            
+            # ĐƯA VÀO SPARK CONTEXT - Xử lý từng frame riêng lẻ
+            # Tạo RDD với 1 phần tử duy nhất (frame này)
+            rdd = self.spark_context.parallelize([(temp_path, output_path, filename)])
+            
+            # Map operation trên Spark worker
+            result = rdd.map(self._process_single_frame).collect()[0]
+            
+            # Xóa file tạm
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            
+            return result
+            
+        except Exception as e:
+            print(f"[Processing Server] Loi xu ly frame {frame_id}: {e}")
+            return (filename, None, f"Error: {str(e)}")
+    
     def process_frames_with_spark(self, frames):
         """
         Xử lý xóa nền cho tất cả frame bằng Spark
@@ -221,6 +308,8 @@ def main():
     parser.add_argument('--camera-host', default='camera-server', help='Camera server host')
     parser.add_argument('--camera-port', type=int, default=9999, help='Camera server port')
     parser.add_argument('--output', default='output_images', help='Output folder')
+    parser.add_argument('--mode', choices=['streaming', 'batch'], default='streaming',
+                        help='Mode: streaming (xu ly tung frame ngay) hoac batch (nhan het roi xu ly)')
     args = parser.parse_args()
     
     server = ProcessingServer(
@@ -235,11 +324,16 @@ def main():
         
         # Kết nối đến Camera Server
         if server.connect_to_camera():
-            # Nhận tất cả frame
-            frames = server.receive_all_frames()
-            
-            # Xử lý frame với Spark
-            results = server.process_frames_with_spark(frames)
+            if args.mode == 'streaming':
+                print("\n=== CHE DO: STREAMING (Xu ly tung frame ngay khi nhan) ===")
+                # XỬ LÝ STREAMING - Đúng yêu cầu đề bài
+                results = server.receive_and_process_streaming()
+            else:
+                print("\n=== CHE DO: BATCH (Nhan het roi xu ly) ===")
+                # Nhận tất cả frame
+                frames = server.receive_all_frames()
+                # Xử lý frame với Spark
+                results = server.process_frames_with_spark(frames)
             
             # In kết quả
             print("\n=== KET QUA XU LY ===")

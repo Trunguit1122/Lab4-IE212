@@ -7,6 +7,14 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     libgl1-mesa-glx \
     libglib2.0-0 \
+    pkg-config \
+    libavformat-dev \
+    libavcodec-dev \
+    libavdevice-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libswresample-dev \
+    libavfilter-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -14,7 +22,8 @@ WORKDIR /app
 
 # Copy requirements and install Python packages
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir Cython==0.29.36 && \
+    pip3 install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY . .

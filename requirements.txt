@@ -4,3 +4,5 @@ numpy==1.24.3
 mediapipe==0.10.8
 streamlit==1.29.0
 pillow==10.1.0
+streamlit-webrtc==0.47.1
+av==9.2.0

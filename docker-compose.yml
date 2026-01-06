@@ -3,6 +3,7 @@ services:
     image: apache/spark:3.5.0-python3
     container_name: spark-master
     hostname: spark-master
+    restart: unless-stopped
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     environment:
       - SPARK_MODE=master
@@ -19,92 +20,91 @@ services:
       - spark-network
 
   spark-worker-1:
-    image: apache/spark:3.5.0-python3
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: spark-worker-1
+    restart: unless-stopped
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
       - SPARK_MODE=worker
       - SPARK_WORKER_CORES=2
       - SPARK_WORKER_MEMORY=2g
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - MEDIAPIPE_DISABLE_GPU=1
+      - GLOG_minloglevel=2
     depends_on:
       - spark-master
     volumes:
       - ./:/opt/spark/work-dir
+      - ./models:/app/models
     networks:
       - spark-network
 
   spark-worker-2:
-    image: apache/spark:3.5.0-python3
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: spark-worker-2
+    restart: unless-stopped
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
       - SPARK_MODE=worker
       - SPARK_WORKER_CORES=2
       - SPARK_WORKER_MEMORY=2g
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - MEDIAPIPE_DISABLE_GPU=1
+      - GLOG_minloglevel=2
     depends_on:
       - spark-master
     volumes:
       - ./:/opt/spark/work-dir
+      - ./models:/app/models
     networks:
       - spark-network
 
-  # Camera Server - Giả lập server camera, chụp từ webcam hoặc đọc từ folder
-  camera-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: camera-server
-    hostname: camera-server
-    # Chế độ camera: chụp từ webcam trực tiếp
-    # Chế độ folder: đọc từ input_images (dùng khi không có webcam)
-    command: python3 camera_server.py --host 0.0.0.0 --port 9999 --mode folder --input /app/input_images --delay 0.3
-    volumes:
-      - ./input_images:/app/input_images
-    # Thêm device để truy cập webcam (uncomment nếu có webcam)
-    # devices:
-    #   - /dev/video0:/dev/video0
-    networks:
-      - spark-network
-    depends_on:
-      - spark-master
-
-  # Processing Server - Nhận frame từ camera, xử lý bằng Spark
+  # Spark Stream Server - NHẬN frame từ client, xử lý với Spark, TRẢ VỀ
   processing-server:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: processing-server
+    restart: unless-stopped
     hostname: processing-server
-    command: python3 processing_server.py --camera-host camera-server --camera-port 9999 --output /app/output_images
+    working_dir: /app
+    command: python3 -u spark_stream_server.py
     environment:
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - MEDIAPIPE_DISABLE_GPU=1
+      - GLOG_minloglevel=2
+    ports:
+      - "9998:9998"
     volumes:
       - ./output_images:/app/output_images
       - ./models:/app/models
     networks:
       - spark-network
     depends_on:
-      - camera-server
       - spark-master
       - spark-worker-1
       - spark-worker-2
 
-  # Streamlit App - Giao diện web (tùy chọn)
+  # Streamlit App - Real-time như Zoom/Meet
   streamlit-app:
     build:
       context: .
       dockerfile: Dockerfile
+    restart: unless-stopped
     container_name: streamlit-background-remover
+    command: streamlit run app_realtime.py --server.address 0.0.0.0 --server.port 8501
     ports:
       - "8501:8501"
     environment:
       - SPARK_MASTER_URL=local[*]
+      - MEDIAPIPE_DISABLE_GPU=1
+      - GLOG_minloglevel=2
     depends_on:
-      - spark-master
-      - spark-worker-1
-      - spark-worker-2
+      - processing-server
     volumes:
       - ./input_images:/app/input_images
       - ./output_images:/app/output_images
