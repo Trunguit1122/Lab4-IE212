@@ -21,6 +21,8 @@
 - **Sinh viên:** Trần Nguyễn Đức Trung
 - **MSSV:** 23521687
 - **Học kỳ:** HK1 2025-2026
+- **GitHub:** [Trunguit1122](https://github.com/Trunguit1122)
+- **Repository:** [Lab4-IE212](https://github.com/Trunguit1122/Lab4-IE212)
 
 ---
 
@@ -117,6 +119,18 @@ Lab04-BackgroundRemover/
 - **Docker** & **Docker Compose** đã cài đặt
 - **4GB RAM** trở lên (cho Spark cluster)
 - **Port** cần thiết: 7077, 8080, 8501, 9999
+- **Git** để clone repository
+
+### 📥 Clone Repository
+
+```bash
+# Clone project từ GitHub
+git clone https://github.com/Trunguit1122/Lab4-IE212.git
+cd Lab4-IE212
+
+# Kiểm tra cấu trúc
+ls -la
+```
 
 ### 🎬 Chạy Hệ Thống Streaming (Camera + Processing Server)
 
